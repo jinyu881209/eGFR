@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>慢性肾病评估结果</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    table {
+      width: 50%;
+      margin: 20px auto;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      border: 1px solid #dddddd;
+      text-align: left;
+      padding: 8px;
+    }
+
+    th {
+      background-color: #f2f2f2;
+    }
+
+    .center {
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>慢性腎臟病評估</h1>
+  <form>
+    <label for="serum_creatinine">血清肌酐 (mg/dL):</label><br>
+    <input type="text" id="serum_creatinine" name="serum_creatinine"><br>
+    <label>性別:</label><br>
+    <input type="radio" id="female" name="gender" value="female">
+    <label for="female">女性</label><br>
+    <input type="radio" id="male" name="gender" value="male">
+    <label for="male">男性</label><br>
+    <label for="age">年齡:</label><br>
+    <input type="text" id="age" name="age"><br>
+    <label for="albumin">尿蛋白 (mg/g):</label><br>
+    <input type="text" id="albumin" name="albumin"><br><br>
+    <button type="button" onclick="calculate()">確定</button>
+  </form>
+
+  <div id="result" class="center"></div>
+
+  <script>
+    function calculate() {
+      var serum_creatinine = parseFloat(document.getElementById("serum_creatinine").value);
+      var gender = document.querySelector('input[name="gender"]:checked').value;
+      var age = parseInt(document.getElementById("age").value);
+      var albumin = parseFloat(document.getElementById("albumin").value);
+
+      // 計算eGFR
+      var estimated_gfr = calculateEGFR(serum_creatinine, gender, age);
+
+      // CKD分類
+      var classification = classifyCKD(estimated_gfr, albumin);
+
+      // 顯示結果
+      var resultDiv = document.getElementById("result");
+      resultDiv.innerHTML = "<h2>評估結果</h2>";
+      resultDiv.innerHTML += "<p>你的估算腎小球濾過率 (eGFR) 值為: " + estimated_gfr.toFixed(2) + " ml/min/1.73 m²</p>";
+      resultDiv.innerHTML += "<p>CKD分類: " + classification[0] + "</p>";
+      resultDiv.innerHTML += "<p>每年訪問次數: " + classification[1] + "次</p>";
+      resultDiv.innerHTML += "<p>進展風險: " + classification[2] + "</p>";
+      resultDiv.innerHTML += "<p>是否需要轉診給腎臟專科: " + (classification[3] ? '是' : '否') + "</p>";
+    }
+
+    function calculateEGFR(serum_creatinine, gender, age) {
+      var k = gender === 'female' ? 0.7 : 0.9;
+      var a = gender === 'female' ? -0.241 : -0.302;
+      var gender_multiplier = gender === 'female' ? 1.012 : 1;
+
+      var eGFR = 142 * Math.pow(Math.min(serum_creatinine / k, 1), a) * Math.pow(Math.max(serum_creatinine / k, 1), -1.200) * Math.pow(0.9938, age) * gender_multiplier;
+
+      return eGFR;
+    }
+
+    function classifyCKD(gfr, albumin) {
+      var gfr_cat, albumin_cat;
+      if (gfr >= 90) {
+        gfr_cat = 'G1';
+      } else if (gfr >= 60) {
+        gfr_cat = 'G2';
+      } else if (gfr >= 45) {
+        gfr_cat = 'G3a';
+      } else if (gfr >= 30) {
+        gfr_cat = 'G3b';
+      } else if (gfr >= 15) {
+        gfr_cat = 'G4';
+      } else {
+        gfr_cat = 'G5';
+      }
+
+      if (albumin < 30) {
+        albumin_cat = 'A1';
+      } else if (albumin < 300) {
+        albumin_cat = 'A2';
+      } else {
+        albumin_cat = 'A3';
+      }
+
+      var combined_cat = gfr_cat + albumin_cat;
+
+      var visits_and_referral = {
+        'G1A1': [1, 'Low risk', false],
+        'G1A2': [1, 'Moderately increased risk', false],
+        'G1A3': [3, 'High risk', true],
+        'G2A1': [1, 'Low risk', false],
+        'G2A2': [1, 'Moderately increased risk', false],
+        'G2A3': [3, 'High risk', true],
+        'G3aA1': [1, 'Moderately increased risk', false],
+        'G3aA2': [2, 'High risk', false],
+        'G3aA3': [3, 'Very high risk', true],
+        'G3bA1': [2, 'High risk', false],
+        'G3bA2': [3, 'Very high risk', true],
+        'G3bA3': [3, 'Very high risk', true],
+        'G4A1': [3, 'Very high risk', true],
+        'G4A2': [3, 'Very high risk', true],
+        'G4A3': [4, 'Very high risk', true],
+        'G5A1': [4, 'Very high risk', true],
+        'G5A2': [4, 'Very high risk', true],
+        'G5A3': [4, 'Very high risk', true],
+      };
+
+      var classification = visits_and_referral[combined_cat] || [null, null, null];
+
+      return [combined_cat, classification[0], classification[1], classification[2]];
+    }
+  </script>
+</body>
+
+</html>
